@@ -2,14 +2,20 @@ import { Request, Response } from "express";
 import { walletRepository } from "../repositories/walletRepository";
 import { z } from "zod";
 
-const CreateWalletSchema = z.object({
+const createWalletSchema = z.object({
   user_id: z.number(),
+});
+
+const updateWalletSchema = z.object({
+  id: z.number(),
+  balance: z.number(),
+  patrimony: z.number(),
 });
 
 export class WalletController {
   async create(req: Request, res: Response) {
     try {
-      const validatedData = CreateWalletSchema.parse(req.body);
+      const validatedData = createWalletSchema.parse(req.body);
       const { user_id } = req.body;
 
       if((await walletRepository.findBy({ user_id })).length) {
@@ -31,9 +37,29 @@ export class WalletController {
 
   async getWalletByUserId(req: Request, res: Response) {
     const { user_id } = req.body;
-    console.log({ user_id })
-    const walletSearched = await walletRepository.findBy({ user_id});
+    const walletSearched = await walletRepository.findBy({ user_id });
 
     return res.status(201).json(walletSearched);
+  }
+
+  async updateWalletById(req: Request, res: Response) {
+    try {
+      const { id, balance, patrimony } = req.body;
+        
+      const wallet = await walletRepository.findOne({ where: { id } });
+  
+      if (!wallet) {
+        return res.status(404).json({ message: 'Wallet not found' });
+      }
+  
+      wallet.balance = balance;
+      wallet.patrimony = patrimony;
+  
+      await walletRepository.save(wallet);
+  
+      return res.status(200).json(wallet);
+    } catch (error) {
+      return res.status(500).json({ message: 'Internal Server Error' });
+    }
   }
 }
